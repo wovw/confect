@@ -82,13 +82,17 @@ export type Returns<Function extends AnyWithProps> = Function["returns"];
 
 export type Error<Function extends AnyWithProps> = Function["error"];
 
-export type ErrorType<Function extends AnyWithProps> =
-  [Function["error"]] extends [never]
-    ? never
-    : Function["error"]["Type"];
+export type ErrorType<Function extends AnyWithProps> = [
+  Function["error"],
+] extends [never]
+  ? never
+  : Function["error"]["Type"];
 
-export type HasError<Function extends AnyWithProps> =
-  [Function["error"]] extends [never] ? false : true;
+export type HasError<Function extends AnyWithProps> = [
+  Function["error"],
+] extends [never]
+  ? false
+  : true;
 
 export type WithName<
   Function extends AnyWithProps,
@@ -120,7 +124,10 @@ type EffectiveReturnsEncoded<Function extends AnyWithProps> =
   Function["error"] extends never
     ? Returns<Function>["Encoded"]
     :
-        | { readonly _tag: "Right"; readonly right: Returns<Function>["Encoded"] }
+        | {
+            readonly _tag: "Right";
+            readonly right: Returns<Function>["Encoded"];
+          }
         | { readonly _tag: "Left"; readonly left: Error<Function>["Encoded"] };
 
 export type RegisteredFunction<Function extends AnyWithProps> =
@@ -154,30 +161,22 @@ const Proto = {
   [TypeId]: TypeId,
 };
 
-const make =
-  <
-    RuntimeAndFunctionType_ extends
-      RuntimeAndFunctionType.RuntimeAndFunctionType,
-    FunctionVisibility_ extends FunctionVisibility,
-  >(
-    runtimeAndFunctionType: RuntimeAndFunctionType_,
-    functionVisibility: FunctionVisibility_,
-  ) =>
+// Overloaded inner function type so that the `error` property shows
+// `Schema.Schema.AnyNoContext` in LSP autocomplete instead of `never`.
+interface MakeFunctionSpec<
+  RuntimeAndFunctionType_ extends RuntimeAndFunctionType.RuntimeAndFunctionType,
+  FunctionVisibility_ extends FunctionVisibility,
+> {
   <
     const Name_ extends string,
     Args_ extends Schema.Schema.AnyNoContext,
     Returns_ extends Schema.Schema.AnyNoContext,
-    Error_ extends Schema.Schema.AnyNoContext = never,
-  >({
-    name,
-    args,
-    returns,
-    error,
-  }: {
+    Error_ extends Schema.Schema.AnyNoContext,
+  >(props: {
     name: Name_;
     args: Args_;
     returns: Returns_;
-    error?: Error_;
+    error: Error_;
   }): FunctionSpec<
     RuntimeAndFunctionType_,
     FunctionVisibility_,
@@ -185,7 +184,43 @@ const make =
     Args_,
     Returns_,
     Error_
-  > => {
+  >;
+  <
+    const Name_ extends string,
+    Args_ extends Schema.Schema.AnyNoContext,
+    Returns_ extends Schema.Schema.AnyNoContext,
+  >(props: {
+    name: Name_;
+    args: Args_;
+    returns: Returns_;
+  }): FunctionSpec<
+    RuntimeAndFunctionType_,
+    FunctionVisibility_,
+    Name_,
+    Args_,
+    Returns_,
+    never
+  >;
+}
+
+const make = <
+  RuntimeAndFunctionType_ extends RuntimeAndFunctionType.RuntimeAndFunctionType,
+  FunctionVisibility_ extends FunctionVisibility,
+>(
+  runtimeAndFunctionType: RuntimeAndFunctionType_,
+  functionVisibility: FunctionVisibility_,
+): MakeFunctionSpec<RuntimeAndFunctionType_, FunctionVisibility_> => {
+  const fn = ({
+    name,
+    args,
+    returns,
+    error,
+  }: {
+    name: string;
+    args: Schema.Schema.AnyNoContext;
+    returns: Schema.Schema.AnyNoContext;
+    error?: Schema.Schema.AnyNoContext;
+  }) => {
     validateConfectFunctionIdentifier(name);
 
     return Object.assign(Object.create(Proto), {
@@ -197,6 +232,8 @@ const make =
       error,
     });
   };
+  return fn as MakeFunctionSpec<RuntimeAndFunctionType_, FunctionVisibility_>;
+};
 
 export const publicQuery = make(RuntimeAndFunctionType.ConvexQuery, "public");
 export const internalQuery = make(

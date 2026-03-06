@@ -67,11 +67,13 @@ type Helper<
     : never;
 };
 
-type Any =
-  | {
-      readonly [key: string]: Any;
-    }
-  | Ref.Any;
+// Runtime-level recursive type for the nested refs structure.
+// We use `unknown` for leaf values (Ref instances) rather than `Ref.Any`
+// because `Ref.Any` has a required phantom `_types` property that doesn't
+// exist at runtime, which would make it incompatible with `ReadonlyRecord`.
+type Any = {
+  readonly [key: string]: Any | unknown;
+};
 
 export const make = <
   ConvexSpec extends Spec.AnyWithPropsWithRuntime<"Convex">,

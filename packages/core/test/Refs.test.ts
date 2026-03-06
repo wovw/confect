@@ -188,9 +188,9 @@ describe("make", () => {
         }),
       ),
     );
-    const refs = Refs.make(spec);
+    const _refs = Refs.make(spec);
 
-    expectTypeOf<Ref.Error<typeof refs.public.notes.get>>().toEqualTypeOf<
+    expectTypeOf<Ref.Error<typeof _refs.public.notes.get>>().toEqualTypeOf<
       typeof MyError
     >();
   });
@@ -205,10 +205,10 @@ describe("make", () => {
         }),
       ),
     );
-    const refs = Refs.make(spec);
+    const _refs = Refs.make(spec);
 
     expectTypeOf<
-      Ref.Error<typeof refs.public.notes.list>
+      Ref.Error<typeof _refs.public.notes.list>
     >().toEqualTypeOf<never>();
   });
 });

@@ -4,22 +4,25 @@ import {
   useMutation as useConvexMutation,
   useQuery as useConvexQuery,
 } from "convex/react";
-import { Either, Schema } from "effect";
+import { type Either, Schema } from "effect";
 
-type QueryReturn<Query extends Ref.AnyPublicQuery> =
-  Ref.Error<Query> extends never
-    ? Ref.Returns<Query>["Type"]
-    : Either.Either<Ref.Returns<Query>["Type"], Ref.Error<Query>["Type"]>;
+type QueryReturn<Query extends Ref.AnyPublicQuery> = [
+  Ref.Error<Query>,
+] extends [never]
+  ? Ref.Returns<Query>["Type"]
+  : Either.Either<Ref.Returns<Query>["Type"], Ref.Error<Query>["Type"]>;
 
-type MutationReturn<Mutation extends Ref.AnyPublicMutation> =
-  Ref.Error<Mutation> extends never
-    ? Ref.Returns<Mutation>["Type"]
-    : Either.Either<Ref.Returns<Mutation>["Type"], Ref.Error<Mutation>["Type"]>;
+type MutationReturn<Mutation extends Ref.AnyPublicMutation> = [
+  Ref.Error<Mutation>,
+] extends [never]
+  ? Ref.Returns<Mutation>["Type"]
+  : Either.Either<Ref.Returns<Mutation>["Type"], Ref.Error<Mutation>["Type"]>;
 
-type ActionReturn<Action extends Ref.AnyPublicAction> =
-  Ref.Error<Action> extends never
-    ? Ref.Returns<Action>["Type"]
-    : Either.Either<Ref.Returns<Action>["Type"], Ref.Error<Action>["Type"]>;
+type ActionReturn<Action extends Ref.AnyPublicAction> = [
+  Ref.Error<Action>,
+] extends [never]
+  ? Ref.Returns<Action>["Type"]
+  : Either.Either<Ref.Returns<Action>["Type"], Ref.Error<Action>["Type"]>;
 
 export const useQuery = <Query extends Ref.AnyPublicQuery>(
   ref: Query,

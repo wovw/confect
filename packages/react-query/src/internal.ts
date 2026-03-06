@@ -6,15 +6,17 @@ import { Schema } from "effect";
 
 export const confectQueryPrefix = "confectQuery";
 
-export type QueryData<Query extends Ref.AnyPublicQuery> =
-  Ref.Error<Query> extends never
-    ? Ref.Returns<Query>["Type"]
-    : Either.Either<Ref.Returns<Query>["Type"], Ref.Error<Query>["Type"]>;
+export type QueryData<Query extends Ref.AnyPublicQuery> = [
+  Ref.Error<Query>,
+] extends [never]
+  ? Ref.Returns<Query>["Type"]
+  : Either.Either<Ref.Returns<Query>["Type"], Ref.Error<Query>["Type"]>;
 
-export type MutationData<Mutation extends Ref.AnyPublicMutation> =
-  Ref.Error<Mutation> extends never
-    ? Ref.Returns<Mutation>["Type"]
-    : Either.Either<Ref.Returns<Mutation>["Type"], Ref.Error<Mutation>["Type"]>;
+export type MutationData<Mutation extends Ref.AnyPublicMutation> = [
+  Ref.Error<Mutation>,
+] extends [never]
+  ? Ref.Returns<Mutation>["Type"]
+  : Either.Either<Ref.Returns<Mutation>["Type"], Ref.Error<Mutation>["Type"]>;
 
 export type ConfectQueryKey =
   | readonly [typeof confectQueryPrefix, string, "skip"]
