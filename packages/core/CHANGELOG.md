@@ -1,5 +1,11 @@
 # @confect/core
 
+## 3.0.0
+
+### Major Changes
+
+- Tanstack query support
+
 ## 2.0.0
 
 ## 1.0.3

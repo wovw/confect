@@ -1,5 +1,17 @@
 # @confect/test
 
+## 3.0.0
+
+### Major Changes
+
+- Tanstack query support
+
+### Patch Changes
+
+- Updated dependencies
+  - @confect/server@3.0.0
+  - @confect/core@3.0.0
+
 ## 2.0.0
 
 ### Patch Changes

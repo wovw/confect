@@ -1,6 +1,6 @@
 {
   "name": "@confect/react-query",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "TanStack React Query bindings for Confect",
   "repository": {
     "type": "git",
