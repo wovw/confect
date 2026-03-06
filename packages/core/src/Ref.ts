@@ -10,11 +10,13 @@ export interface Ref<
   _Returns extends Schema.Schema.AnyNoContext,
   _Error extends Schema.Schema.AnyNoContext | never = never,
 > {
-  readonly _RuntimeAndFunctionType?: _RuntimeAndFunctionType;
-  readonly _FunctionVisibility?: _FunctionVisibility;
-  readonly _Args?: _Args;
-  readonly _Returns?: _Returns;
-  readonly _Error?: _Error;
+  readonly _types: {
+    readonly runtimeAndFunctionType: _RuntimeAndFunctionType;
+    readonly functionVisibility: _FunctionVisibility;
+    readonly args: _Args;
+    readonly returns: _Returns;
+    readonly error: _Error;
+  };
 }
 
 export interface Any extends Ref<any, any, any, any, any> {}
@@ -71,82 +73,32 @@ export interface AnyPublicAction extends Ref<
   Schema.Schema.AnyNoContext | never
 > {}
 
-export type GetRuntimeAndFunctionType<Ref_> =
-  Ref_ extends Ref<
-    infer RuntimeAndFunctionType_,
-    infer _FunctionVisibility,
-    infer _Args,
-    infer _Returns,
-    infer _Error
-  >
-    ? RuntimeAndFunctionType_
-    : never;
+export type GetRuntimeAndFunctionType<Ref_ extends Any> =
+  Ref_["_types"]["runtimeAndFunctionType"];
 
-export type GetRuntime<Ref_> =
-  Ref_ extends Ref<
-    infer RuntimeAndFunctionType_,
-    infer _FunctionVisibility,
-    infer _Args,
-    infer _Returns,
-    infer _Error
-  >
-    ? RuntimeAndFunctionType.GetRuntime<RuntimeAndFunctionType_>
-    : never;
+export type GetRuntime<Ref_ extends Any> = RuntimeAndFunctionType.GetRuntime<
+  Ref_["_types"]["runtimeAndFunctionType"]
+>;
 
-export type GetFunctionType<Ref_> =
-  Ref_ extends Ref<
-    infer RuntimeAndFunctionType_,
-    infer _FunctionVisibility,
-    infer _Args,
-    infer _Returns,
-    infer _Error
-  >
-    ? RuntimeAndFunctionType.GetFunctionType<RuntimeAndFunctionType_>
-    : never;
+export type GetFunctionType<Ref_ extends Any> =
+  RuntimeAndFunctionType.GetFunctionType<
+    Ref_["_types"]["runtimeAndFunctionType"]
+  >;
 
-export type GetFunctionVisibility<Ref_> =
-  Ref_ extends Ref<
-    infer _RuntimeAndFunctionType,
-    infer FunctionVisibility_,
-    infer _Args,
-    infer _Returns,
-    infer _Error
-  >
-    ? FunctionVisibility_
-    : never;
+export type GetFunctionVisibility<Ref_ extends Any> =
+  Ref_["_types"]["functionVisibility"];
 
-export type Args<Ref_> =
-  Ref_ extends Ref<
-    infer _RuntimeAndFunctionType,
-    infer _FunctionVisibility,
-    infer Args_,
-    infer _Returns,
-    infer _Error
-  >
-    ? Args_
-    : never;
+export type Args<Ref_ extends Any> = Ref_["_types"]["args"];
 
-export type Returns<Ref_> =
-  Ref_ extends Ref<
-    infer _RuntimeAndFunctionType,
-    infer _FunctionVisibility,
-    infer _Args,
-    infer Returns_,
-    infer _Error
-  >
-    ? Returns_
-    : never;
+export type Returns<Ref_ extends Any> = Ref_["_types"]["returns"];
 
-export type Error<Ref_> =
-  Ref_ extends Ref<
-    infer _RuntimeAndFunctionType,
-    infer _FunctionVisibility,
-    infer _Args,
-    infer _Returns,
-    infer Error_
-  >
-    ? Error_
-    : never;
+export type Error<Ref_ extends Any> = Ref_["_types"]["error"];
+
+export type HasError<Ref_ extends Any> = [Ref_["_types"]["error"]] extends [
+  never,
+]
+  ? false
+  : true;
 
 export type FromFunctionSpec<F extends FunctionSpec.AnyWithProps> = Ref<
   FunctionSpec.GetRuntimeAndFunctionType<F>,
@@ -179,7 +131,7 @@ export const make = <
   ({
     [HiddenFunctionKey]: function_,
     [HiddenConvexFunctionNameKey]: convexFunctionName,
-  }) as Ref<
+  }) as unknown as Ref<
     RuntimeAndFunctionType_,
     FunctionVisibility_,
     Args_,

@@ -3,5 +3,5 @@ export {
   ConfectQueryProvider,
   type ConfectQueryProviderProps,
 } from "./ConfectQueryProvider";
-export { confectQuery } from "./confectQuery";
+export { confectQuery, type ConfectQueryOptions } from "./confectQuery";
 export { useConfectMutation } from "./useConfectMutation";

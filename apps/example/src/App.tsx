@@ -17,11 +17,6 @@ type NoteId = Ref.Args<
   typeof refs.public.notesAndRandom.notes.getByIdOrError
 >["Type"]["noteId"];
 
-type NoteByIdData = Either.Either<
-  Ref.Returns<typeof refs.public.notesAndRandom.notes.getByIdOrError>["Type"],
-  Ref.Error<typeof refs.public.notesAndRandom.notes.getByIdOrError>["Type"]
->;
-
 // ─── Root: uses ConvexProvider for @confect/react hooks ──────────────────────
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
@@ -166,7 +161,7 @@ const TanStackQueryDemo = () => {
       selectedNoteId === null ? "skip" : { noteId: selectedNoteId },
     ),
   );
-  const noteByIdData = noteByIdQuery.data as NoteByIdData | undefined;
+  const noteByIdData = noteByIdQuery.data;
 
   const notes = useConfectQuery(refs.public.notesAndRandom.notes.list, {});
 

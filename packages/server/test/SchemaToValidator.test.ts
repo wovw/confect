@@ -1460,7 +1460,7 @@ describe(compileArgsSchema, () => {
 
 describe("Either return schema compilation", () => {
   effect("compiles Schema.Either as a union of Right and Left objects", () =>
-    Effect.gen(function* () {
+    Effect.sync(() => {
       class MyError extends Schema.TaggedError<MyError>()("MyError", {
         message: Schema.String,
       }) {}
@@ -1491,7 +1491,7 @@ describe("Either return schema compilation", () => {
   );
 
   effect("compiles Schema.Either with union error", () =>
-    Effect.gen(function* () {
+    Effect.sync(() => {
       class ErrorA extends Schema.TaggedError<ErrorA>()("ErrorA", {}) {}
       class ErrorB extends Schema.TaggedError<ErrorB>()("ErrorB", {
         code: Schema.Number,

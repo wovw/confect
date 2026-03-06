@@ -9,12 +9,11 @@ import { convexTest } from "convex-test";
 import type { GenericMutationCtx, UserIdentity } from "convex/server";
 import type { Value } from "convex/values";
 import type { ParseResult } from "effect";
-import { Context, Effect, Either, Layer, Schema } from "effect";
+import { Context, Effect, type Either, Layer, Schema } from "effect";
 
-type RefReturn<Ref_ extends Ref.Any> =
-  Ref.Error<Ref_> extends never
-    ? Ref.Returns<Ref_>["Type"]
-    : Either.Either<Ref.Returns<Ref_>["Type"], Ref.Error<Ref_>["Type"]>;
+type RefReturn<Ref_ extends Ref.Any> = [Ref.Error<Ref_>] extends [never]
+  ? Ref.Returns<Ref_>["Type"]
+  : Either.Either<Ref.Returns<Ref_>["Type"], Ref.Error<Ref_>["Type"]>;
 
 export type TestConfectWithoutIdentity<
   ConfectSchema extends DatabaseSchema.AnyWithProps,
