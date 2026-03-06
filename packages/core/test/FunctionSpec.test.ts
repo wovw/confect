@@ -50,4 +50,46 @@ describe("make", () => {
       `[Error: Expected a valid Confect function identifier, but received: "schema". "schema" is a reserved Convex file name.]`,
     );
   });
+
+  it("creates a function spec with an error schema", () => {
+    class MyError extends Schema.TaggedError<MyError>()("MyError", {
+      message: Schema.String,
+    }) {}
+
+    const functionSpec = FunctionSpec.publicQuery({
+      name: "myFunction",
+      args: Schema.Struct({}),
+      returns: Schema.String,
+      error: MyError,
+    });
+
+    expect(FunctionSpec.isFunctionSpec(functionSpec)).toStrictEqual(true);
+    expect(functionSpec.error).toBe(MyError);
+  });
+
+  it("creates a function spec with a union error schema", () => {
+    class ErrorA extends Schema.TaggedError<ErrorA>()("ErrorA", {}) {}
+    class ErrorB extends Schema.TaggedError<ErrorB>()("ErrorB", {
+      code: Schema.Number,
+    }) {}
+
+    const functionSpec = FunctionSpec.publicQuery({
+      name: "myFunction",
+      args: Schema.Struct({}),
+      returns: Schema.String,
+      error: Schema.Union(ErrorA, ErrorB),
+    });
+
+    expect(FunctionSpec.isFunctionSpec(functionSpec)).toStrictEqual(true);
+  });
+
+  it("creates a function spec without error (backward compat)", () => {
+    const functionSpec = FunctionSpec.publicQuery({
+      name: "myFunction",
+      args: Schema.Struct({}),
+      returns: Schema.String,
+    });
+
+    expect((functionSpec as any).error).toBeUndefined();
+  });
 });

@@ -77,7 +77,7 @@
       },
       {
         "group": "Clients",
-        "pages": ["clients/react"]
+        "pages": ["clients/react", "clients/react-query"]
       },
       {
         "group": "Guides",

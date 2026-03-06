@@ -169,4 +169,46 @@ describe("make", () => {
     // @ts-expect-error - internalList should be filtered out
     void refs.public.notes.internalList;
   });
+
+  it("turns a spec with error into refs that carry the error type", () => {
+    class MyError extends Schema.TaggedError<MyError>()("MyError", {
+      message: Schema.String,
+    }) {}
+
+    const FnArgs = Schema.Struct({ id: Schema.String });
+    const FnReturns = Schema.String;
+
+    const spec = Spec.make().add(
+      GroupSpec.make("notes").addFunction(
+        FunctionSpec.publicQuery({
+          name: "get",
+          args: FnArgs,
+          returns: FnReturns,
+          error: MyError,
+        }),
+      ),
+    );
+    const refs = Refs.make(spec);
+
+    expectTypeOf<Ref.Error<typeof refs.public.notes.get>>().toEqualTypeOf<
+      typeof MyError
+    >();
+  });
+
+  it("refs without error have never as error type", () => {
+    const spec = Spec.make().add(
+      GroupSpec.make("notes").addFunction(
+        FunctionSpec.publicQuery({
+          name: "list",
+          args: Schema.Struct({}),
+          returns: Schema.String,
+        }),
+      ),
+    );
+    const refs = Refs.make(spec);
+
+    expectTypeOf<
+      Ref.Error<typeof refs.public.notes.list>
+    >().toEqualTypeOf<never>();
+  });
 });

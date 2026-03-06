@@ -6,7 +6,7 @@ import {
   type RegisteredMutation,
   type RegisteredQuery,
 } from "convex/server";
-import { Effect, Layer, pipe, Schema } from "effect";
+import { Effect, Either, Layer, pipe, Schema } from "effect";
 import * as ActionCtx from "./ActionCtx";
 import * as ActionRunner from "./ActionRunner";
 import * as Auth from "./Auth";
@@ -36,11 +36,13 @@ export const actionFunctionBase = <
   args,
   returns,
   handler,
+  error,
   createLayer,
 }: {
   args: Schema.Schema<Args, ConvexArgs>;
   returns: Schema.Schema<Returns, ConvexReturns>;
   handler: (a: Args) => Effect.Effect<Returns, E, R>;
+  error: Schema.Schema.AnyNoContext | undefined;
   createLayer: (
     ctx: GenericActionCtx<DataModel.ToConvex<DataModel.FromSchema<Schema>>>,
   ) => Layer.Layer<R>;
@@ -56,10 +58,22 @@ export const actionFunctionBase = <
       Schema.decode(args),
       Effect.orDie,
       Effect.andThen((decodedArgs) =>
-        handler(decodedArgs).pipe(Effect.provide(createLayer(ctx))),
-      ),
-      Effect.andThen((convexReturns) =>
-        Schema.encodeUnknown(returns)(convexReturns),
+        error
+          ? handler(decodedArgs).pipe(
+              Effect.provide(createLayer(ctx)),
+              Effect.matchEffect({
+                onSuccess: (value: any) =>
+                  Schema.encodeUnknown(returns)(Either.right(value)),
+                onFailure: (domainError: any) =>
+                  Schema.encodeUnknown(returns)(Either.left(domainError)),
+              }),
+            )
+          : handler(decodedArgs).pipe(
+              Effect.provide(createLayer(ctx)),
+              Effect.andThen((convexReturns: any) =>
+                Schema.encodeUnknown(returns)(convexReturns),
+              ),
+            ),
       ),
       Effect.runPromise,
     ),

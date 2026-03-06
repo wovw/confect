@@ -9,7 +9,12 @@ import { convexTest } from "convex-test";
 import type { GenericMutationCtx, UserIdentity } from "convex/server";
 import type { Value } from "convex/values";
 import type { ParseResult } from "effect";
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Either, Layer, Schema } from "effect";
+
+type RefReturn<Ref_ extends Ref.Any> =
+  Ref.Error<Ref_> extends never
+    ? Ref.Returns<Ref_>["Type"]
+    : Either.Either<Ref.Returns<Ref_>["Type"], Ref.Error<Ref_>["Type"]>;
 
 export type TestConfectWithoutIdentity<
   ConfectSchema extends DatabaseSchema.AnyWithProps,
@@ -17,15 +22,15 @@ export type TestConfectWithoutIdentity<
   query: <QueryRef extends Ref.AnyQuery>(
     queryRef: QueryRef,
     args: Ref.Args<QueryRef>["Type"],
-  ) => Effect.Effect<Ref.Returns<QueryRef>["Type"], ParseResult.ParseError>;
+  ) => Effect.Effect<RefReturn<QueryRef>, ParseResult.ParseError>;
   mutation: <MutationRef extends Ref.AnyMutation>(
     mutationRef: MutationRef,
     args: Ref.Args<MutationRef>["Type"],
-  ) => Effect.Effect<Ref.Returns<MutationRef>["Type"], ParseResult.ParseError>;
+  ) => Effect.Effect<RefReturn<MutationRef>, ParseResult.ParseError>;
   action: <ActionRef extends Ref.AnyAction>(
     actionRef: ActionRef,
     args: Ref.Args<ActionRef>["Type"],
-  ) => Effect.Effect<Ref.Returns<ActionRef>["Type"], ParseResult.ParseError>;
+  ) => Effect.Effect<RefReturn<ActionRef>, ParseResult.ParseError>;
   run: {
     <E>(
       handler: Effect.Effect<
@@ -77,7 +82,7 @@ class TestConfectImplWithoutIdentity<
   readonly query = <QueryRef extends Ref.AnyQuery>(
     queryRef: QueryRef,
     args: Ref.Args<QueryRef>["Type"],
-  ): Effect.Effect<Ref.Returns<QueryRef>["Type"], ParseResult.ParseError> =>
+  ): Effect.Effect<RefReturn<QueryRef>, ParseResult.ParseError> =>
     Effect.gen(this, function* () {
       const query = Ref.getFunction(queryRef);
       const queryName = Ref.getConvexFunctionName(queryRef);
@@ -88,13 +93,26 @@ class TestConfectImplWithoutIdentity<
         this.testConvex.query(queryName as any, encodedArgs),
       );
 
-      return yield* Schema.decode(query.returns)(encodedReturns);
+      if (query.error) {
+        const eitherSchema = Schema.Either({
+          left: query.error as Schema.Schema.AnyNoContext,
+          right: query.returns as Schema.Schema.AnyNoContext,
+        });
+
+        return (yield* Schema.decodeUnknown(eitherSchema)(
+          encodedReturns,
+        )) as RefReturn<QueryRef>;
+      }
+
+      return (yield* Schema.decodeUnknown(query.returns)(
+        encodedReturns,
+      )) as RefReturn<QueryRef>;
     });
 
   readonly mutation = <MutationRef extends Ref.AnyMutation>(
     mutationRef: MutationRef,
     args: Ref.Args<MutationRef>["Type"],
-  ): Effect.Effect<Ref.Returns<MutationRef>["Type"], ParseResult.ParseError> =>
+  ): Effect.Effect<RefReturn<MutationRef>, ParseResult.ParseError> =>
     Effect.gen(this, function* () {
       const mutation = Ref.getFunction(mutationRef);
       const mutationName = Ref.getConvexFunctionName(mutationRef);
@@ -105,13 +123,26 @@ class TestConfectImplWithoutIdentity<
         this.testConvex.mutation(mutationName as any, encodedArgs),
       );
 
-      return yield* Schema.decode(mutation.returns)(encodedReturns);
+      if (mutation.error) {
+        const eitherSchema = Schema.Either({
+          left: mutation.error as Schema.Schema.AnyNoContext,
+          right: mutation.returns as Schema.Schema.AnyNoContext,
+        });
+
+        return (yield* Schema.decodeUnknown(eitherSchema)(
+          encodedReturns,
+        )) as RefReturn<MutationRef>;
+      }
+
+      return (yield* Schema.decodeUnknown(mutation.returns)(
+        encodedReturns,
+      )) as RefReturn<MutationRef>;
     });
 
   readonly action = <ActionRef extends Ref.AnyAction>(
     actionRef: ActionRef,
     args: Ref.Args<ActionRef>["Type"],
-  ): Effect.Effect<Ref.Returns<ActionRef>["Type"], ParseResult.ParseError> =>
+  ): Effect.Effect<RefReturn<ActionRef>, ParseResult.ParseError> =>
     Effect.gen(this, function* () {
       const action = Ref.getFunction(actionRef);
       const actionName = Ref.getConvexFunctionName(actionRef);
@@ -122,7 +153,20 @@ class TestConfectImplWithoutIdentity<
         this.testConvex.action(actionName as any, encodedArgs),
       );
 
-      return yield* Schema.decode(action.returns)(encodedReturns);
+      if (action.error) {
+        const eitherSchema = Schema.Either({
+          left: action.error as Schema.Schema.AnyNoContext,
+          right: action.returns as Schema.Schema.AnyNoContext,
+        });
+
+        return (yield* Schema.decodeUnknown(eitherSchema)(
+          encodedReturns,
+        )) as RefReturn<ActionRef>;
+      }
+
+      return (yield* Schema.decodeUnknown(action.returns)(
+        encodedReturns,
+      )) as RefReturn<ActionRef>;
     });
 
   readonly run: TestConfectWithoutIdentity<ConfectSchema>["run"] = (<

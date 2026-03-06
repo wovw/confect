@@ -1,0 +1,185 @@
+---
+icon: "react"
+title: "React Query"
+description: "Use TanStack React Query with Confect for advanced data management patterns."
+---
+
+`@confect/react-query` bridges Confect's typed Convex functions with [TanStack React Query](https://tanstack.com/query), giving you the full power of React Query's caching, background refetching, and devtools while keeping Confect's automatic schema encoding/decoding and typed domain errors.
+
+## Setup
+
+### Using `ConfectQueryProvider`
+
+The simplest setup uses the convenience provider, which sets up both the Convex client and a TanStack `QueryClient` wired together:
+
+```tsx src/main.tsx
+import { ConfectQueryProvider } from "@confect/react-query";
+import React from "react";
+import ReactDOM from "react-dom/client";
+
+import App from "./App";
+
+ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement,
+).render(
+  <React.StrictMode>
+    <ConfectQueryProvider url={import.meta.env.VITE_CONVEX_URL}>
+      <App />
+    </ConfectQueryProvider>
+  </React.StrictMode>,
+);
+```
+
+`ConfectQueryProvider` wraps both `ConvexProvider` and `QueryClientProvider`, so `@confect/react` hooks also work inside it.
+
+### Manual setup
+
+For more control, you can set up the clients yourself:
+
+```tsx src/main.tsx
+import { ConfectQueryClient } from "@confect/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+
+const convexClient = new ConvexReactClient(
+  import.meta.env.VITE_CONVEX_URL,
+);
+const confectQueryClient = new ConfectQueryClient(convexClient);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryKeyHashFn: confectQueryClient.hashFn(),
+      queryFn: confectQueryClient.queryFn(),
+    },
+  },
+});
+
+// Connect subscriptions — returns a cleanup function
+confectQueryClient.connect(queryClient);
+
+ReactDOM.createRoot(
+  document.getElementById("root") as HTMLElement,
+).render(
+  <React.StrictMode>
+    <ConvexProvider client={convexClient}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ConvexProvider>
+  </React.StrictMode>,
+);
+```
+
+### Using alongside `ConvexProvider`
+
+If your app already uses `ConvexProvider` for `@confect/react` hooks, you can pass the existing Convex client to `ConfectQueryProvider` to avoid creating a duplicate connection:
+
+```tsx
+const convexClient = useMemo(() => new ConvexReactClient(url), []);
+
+<ConvexProvider client={convexClient}>
+  {/* @confect/react hooks work here */}
+  <BasicFeatures />
+
+  <ConfectQueryProvider url={url} convexClient={convexClient}>
+    {/* TanStack Query features work here */}
+    <AdvancedFeatures />
+  </ConfectQueryProvider>
+</ConvexProvider>;
+```
+
+## `confectQuery`
+
+Creates TanStack Query options for a Confect query ref. Use it with TanStack's `useQuery`:
+
+```tsx
+import { confectQuery } from "@confect/react-query";
+import { useQuery } from "@tanstack/react-query";
+import refs from "../confect/_generated/refs";
+
+const NoteList = () => {
+  const { data: notes } = useQuery(
+    confectQuery(refs.public.notes.list, {}),
+  );
+
+  if (notes === undefined) return <p>Loading...</p>;
+
+  return (
+    <ul>
+      {notes.map((note) => (
+        <li key={note._id}>{note.text}</li>
+      ))}
+    </ul>
+  );
+};
+```
+
+### Skip pattern
+
+Pass `"skip"` as the args to disable the query (equivalent to `enabled: false`):
+
+```tsx
+const { data } = useQuery(
+  confectQuery(
+    refs.public.notes.getById,
+    selectedId ? { noteId: selectedId } : "skip",
+  ),
+);
+```
+
+### Domain errors
+
+When a function has an `error` schema, `confectQuery` returns `Either<SuccessType, ErrorType>` as the data type instead of just the success type. Domain errors are delivered in the data channel, not the error channel:
+
+```tsx
+import { Either } from "effect";
+
+const { data, error } = useQuery(
+  confectQuery(refs.public.notes.getByIdOrError, { noteId }),
+);
+
+// `error` = unhandled errors (network failure, schema mismatch, server crash)
+// `data` = Either<NoteDoc, NoteNotFoundError> — typed domain errors in data
+
+if (data) {
+  Either.match(data, {
+    onLeft: (domainError) =>
+      console.log(domainError._tag, domainError.noteId),
+    onRight: (note) => console.log(note.text),
+  });
+}
+```
+
+## `useConfectMutation`
+
+Wraps a Confect mutation ref for use with TanStack Query's mutation patterns. Encodes args and decodes results through the function's schemas:
+
+```tsx
+import { useConfectMutation } from "@confect/react-query";
+import refs from "../confect/_generated/refs";
+
+const InsertNote = () => {
+  const insertNote = useConfectMutation(refs.public.notes.insert);
+
+  return (
+    <button onClick={() => void insertNote({ text: "Hello" })}>
+      Insert note
+    </button>
+  );
+};
+```
+
+## How it works
+
+`@confect/react-query` manages Convex real-time subscriptions behind the scenes:
+
+1. When a `confectQuery` is observed by a component, `ConfectQueryClient` creates a Convex `watchQuery` subscription
+2. When the subscription fires an update, the raw Convex data is decoded through the function's Effect Schema (including `Either` unwrapping for domain errors) and pushed into the TanStack Query cache via `setQueryData`
+3. When all observers for a query are removed, the Convex subscription is torn down
+4. `staleTime` is set to `Infinity` by default since Convex subscriptions provide real-time updates — there's no need for TanStack Query to refetch
+
+This gives you Convex's real-time reactivity combined with TanStack Query's caching, devtools, and data management patterns.

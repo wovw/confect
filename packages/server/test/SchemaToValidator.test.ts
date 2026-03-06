@@ -6,6 +6,7 @@ import { GenericId } from "@confect/core/GenericId";
 import {
   compileArgsSchema,
   compileAst,
+  compileReturnsSchema,
   compileSchema,
   compileTableSchema,
   EmptyTupleIsNotSupportedError,
@@ -1453,6 +1454,57 @@ describe(compileArgsSchema, () => {
       }).pipe(Effect.exit);
 
       expect(exit).toStrictEqual(Exit.fail(new TopLevelMustBeObjectError()));
+    }),
+  );
+});
+
+describe("Either return schema compilation", () => {
+  effect("compiles Schema.Either as a union of Right and Left objects", () =>
+    Effect.gen(function* () {
+      class MyError extends Schema.TaggedError<MyError>()("MyError", {
+        message: Schema.String,
+      }) {}
+
+      const eitherSchema = Schema.Either({
+        left: MyError,
+        right: Schema.String,
+      });
+
+      const compiledValidator = compileReturnsSchema(eitherSchema);
+
+      const expectedValidator = v.union(
+        v.object({
+          _tag: v.literal("Right"),
+          right: v.string(),
+        }),
+        v.object({
+          _tag: v.literal("Left"),
+          left: v.object({
+            _tag: v.literal("MyError"),
+            message: v.string(),
+          }),
+        }),
+      );
+
+      expect(compiledValidator).toStrictEqual(expectedValidator);
+    }),
+  );
+
+  effect("compiles Schema.Either with union error", () =>
+    Effect.gen(function* () {
+      class ErrorA extends Schema.TaggedError<ErrorA>()("ErrorA", {}) {}
+      class ErrorB extends Schema.TaggedError<ErrorB>()("ErrorB", {
+        code: Schema.Number,
+      }) {}
+
+      const eitherSchema = Schema.Either({
+        left: Schema.Union(ErrorA, ErrorB),
+        right: Schema.Struct({ id: Schema.String }),
+      });
+
+      const compiledValidator = compileReturnsSchema(eitherSchema);
+
+      expect(compiledValidator).toBeDefined();
     }),
   );
 });

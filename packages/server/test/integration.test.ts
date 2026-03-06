@@ -1,8 +1,9 @@
 import { GenericId } from "@confect/core";
 import { describe, expectTypeOf, it } from "@effect/vitest";
 import { assertEquals } from "@effect/vitest/utils";
-import { Array, Effect } from "effect";
+import { Array, Effect, Either } from "effect";
 import refs from "./confect/_generated/refs";
+import type { NoteNotFoundError } from "./confect/errors";
 import { DatabaseWriter } from "./confect/_generated/services";
 import type { Notes } from "./confect/tables/Notes";
 import * as TestConfect from "./TestConfect";
@@ -110,6 +111,56 @@ describe("QueryRunner", () => {
 
       expectTypeOf(count).toEqualTypeOf<number>();
       assertEquals(count, 2);
+    }).pipe(Effect.provide(TestConfect.layer())),
+  );
+});
+
+describe("Domain errors", () => {
+  it.effect("returns Either.right on success for functions with error", () =>
+    Effect.gen(function* () {
+      const c = yield* TestConfect.TestConfect;
+
+      const noteId = yield* c.mutation(refs.public.groups.notes.insert, {
+        text: "test",
+      });
+
+      const result = yield* c.query(refs.public.groups.notes.getByIdOrError, {
+        noteId,
+      });
+
+      expectTypeOf(result).toEqualTypeOf<
+        Either.Either<(typeof Notes.Doc)["Type"], NoteNotFoundError>
+      >();
+
+      assertEquals(Either.isRight(result), true);
+      if (Either.isRight(result)) {
+        assertEquals(result.right._id, noteId);
+      }
+    }).pipe(Effect.provide(TestConfect.layer())),
+  );
+
+  it.effect("returns Either.left on domain error", () =>
+    Effect.gen(function* () {
+      const c = yield* TestConfect.TestConfect;
+
+      const noteId = yield* c.mutation(refs.public.groups.notes.insert, {
+        text: "test",
+      });
+      yield* c.mutation(refs.public.groups.notes.delete_, { noteId });
+
+      const result = yield* c.query(refs.public.groups.notes.getByIdOrError, {
+        noteId,
+      });
+
+      expectTypeOf(result).toEqualTypeOf<
+        Either.Either<(typeof Notes.Doc)["Type"], NoteNotFoundError>
+      >();
+
+      assertEquals(Either.isLeft(result), true);
+      if (Either.isLeft(result)) {
+        assertEquals(result.left._tag, "NoteNotFoundError");
+        assertEquals(result.left.noteId, noteId);
+      }
     }).pipe(Effect.provide(TestConfect.layer())),
   );
 });

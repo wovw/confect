@@ -1,5 +1,6 @@
 import { FunctionSpec, GenericId, GroupSpec } from "@confect/core";
 import { Schema } from "effect";
+import { NoteNotFoundError } from "../../errors";
 import { Notes } from "../../tables/Notes";
 
 export const notes = GroupSpec.make("notes")
@@ -36,5 +37,13 @@ export const notes = GroupSpec.make("notes")
       name: "internalGetFirst",
       args: Schema.Struct({}),
       returns: Schema.Option(Notes.Doc),
+    }),
+  )
+  .addFunction(
+    FunctionSpec.publicQuery({
+      name: "getByIdOrError",
+      args: Schema.Struct({ noteId: GenericId.GenericId("notes") }),
+      returns: Notes.Doc,
+      error: NoteNotFoundError,
     }),
   );

@@ -9,7 +9,7 @@ import {
   mutationGeneric,
   queryGeneric,
 } from "convex/server";
-import { Effect, Layer, Match, pipe, Schema } from "effect";
+import { Effect, Either, Layer, Match, pipe, Schema } from "effect";
 import type * as Api from "./Api";
 import * as Auth from "./Auth";
 import * as DatabaseReader from "./DatabaseReader";
@@ -30,8 +30,12 @@ import { StorageReader, StorageWriter } from "./Storage";
 export const make = <Api_ extends Api.AnyWithPropsWithRuntime<"Convex">>(
   api: Api_,
   { function_, handler }: RegistryItem.AnyWithProps,
-): RegisteredFunction.RegisteredFunction =>
-  Match.value(function_.runtimeAndFunctionType.functionType).pipe(
+): RegisteredFunction.RegisteredFunction => {
+  const effectiveReturnsSchema = function_.error
+    ? Schema.Either({ left: function_.error, right: function_.returns })
+    : function_.returns;
+
+  return Match.value(function_.runtimeAndFunctionType.functionType).pipe(
     Match.when("query", () => {
       const genericFunction = Match.value(function_.functionVisibility).pipe(
         Match.when("public", () => queryGeneric),
@@ -42,8 +46,9 @@ export const make = <Api_ extends Api.AnyWithPropsWithRuntime<"Convex">>(
       return genericFunction(
         queryFunction(api.databaseSchema, {
           args: function_.args,
-          returns: function_.returns,
+          returns: effectiveReturnsSchema,
           handler,
+          error: function_.error,
         }),
       );
     }),
@@ -57,8 +62,9 @@ export const make = <Api_ extends Api.AnyWithPropsWithRuntime<"Convex">>(
       return genericFunction(
         mutationFunction(api.databaseSchema, {
           args: function_.args,
-          returns: function_.returns,
+          returns: effectiveReturnsSchema,
           handler,
+          error: function_.error,
         }),
       );
     }),
@@ -72,13 +78,15 @@ export const make = <Api_ extends Api.AnyWithPropsWithRuntime<"Convex">>(
       return genericFunction(
         convexActionFunction(api.databaseSchema, {
           args: function_.args,
-          returns: function_.returns,
+          returns: effectiveReturnsSchema,
           handler,
+          error: function_.error,
         }),
       );
     }),
     Match.exhaustive,
   );
+};
 
 const queryFunction = <
   DatabaseSchema_ extends DatabaseSchema.AnyWithProps,
@@ -93,6 +101,7 @@ const queryFunction = <
     args,
     returns,
     handler,
+    error,
   }: {
     args: Schema.Schema<Args, ConvexArgs>;
     returns: Schema.Schema<Returns, ConvexReturns>;
@@ -109,6 +118,7 @@ const queryFunction = <
           DataModel.ToConvex<DataModel.FromSchema<DatabaseSchema_>>
         >
     >;
+    error: Schema.Schema.AnyNoContext | undefined;
   },
 ) => ({
   args: SchemaToValidator.compileArgsSchema(args),
@@ -124,27 +134,52 @@ const queryFunction = <
       Schema.decode(args),
       Effect.orDie,
       Effect.andThen((decodedArgs) =>
-        pipe(
-          handler(decodedArgs),
-          Effect.provide(
-            Layer.mergeAll(
-              DatabaseReader.layer(databaseSchema, ctx.db),
-              Auth.layer(ctx.auth),
-              StorageReader.layer(ctx.storage),
-              QueryRunner.layer(ctx.runQuery),
-              Layer.succeed(
-                QueryCtx.QueryCtx<
-                  DataModel.ToConvex<DataModel.FromSchema<DatabaseSchema_>>
-                >(),
-                ctx,
+        error
+          ? pipe(
+              handler(decodedArgs),
+              Effect.provide(
+                Layer.mergeAll(
+                  DatabaseReader.layer(databaseSchema, ctx.db),
+                  Auth.layer(ctx.auth),
+                  StorageReader.layer(ctx.storage),
+                  QueryRunner.layer(ctx.runQuery),
+                  Layer.succeed(
+                    QueryCtx.QueryCtx<
+                      DataModel.ToConvex<DataModel.FromSchema<DatabaseSchema_>>
+                    >(),
+                    ctx,
+                  ),
+                  Layer.setConfigProvider(ConvexConfigProvider.make()),
+                ),
               ),
-              Layer.setConfigProvider(ConvexConfigProvider.make()),
+              Effect.matchEffect({
+                onSuccess: (value: any) =>
+                  Schema.encodeUnknown(returns)(Either.right(value)),
+                onFailure: (domainError: any) =>
+                  Schema.encodeUnknown(returns)(Either.left(domainError)),
+              }),
+            )
+          : pipe(
+              handler(decodedArgs),
+              Effect.provide(
+                Layer.mergeAll(
+                  DatabaseReader.layer(databaseSchema, ctx.db),
+                  Auth.layer(ctx.auth),
+                  StorageReader.layer(ctx.storage),
+                  QueryRunner.layer(ctx.runQuery),
+                  Layer.succeed(
+                    QueryCtx.QueryCtx<
+                      DataModel.ToConvex<DataModel.FromSchema<DatabaseSchema_>>
+                    >(),
+                    ctx,
+                  ),
+                  Layer.setConfigProvider(ConvexConfigProvider.make()),
+                ),
+              ),
+              Effect.andThen((convexReturns: any) =>
+                Schema.encodeUnknown(returns)(convexReturns),
+              ),
             ),
-          ),
-        ),
-      ),
-      Effect.andThen((convexReturns) =>
-        Schema.encodeUnknown(returns)(convexReturns),
       ),
       Effect.runPromise,
     ),
@@ -196,10 +231,12 @@ const mutationFunction = <
     args,
     returns,
     handler,
+    error,
   }: {
     args: Schema.Schema<Args, ConvexArgs>;
     returns: Schema.Schema<Returns, ConvexReturns>;
     handler: (a: Args) => Effect.Effect<Returns, E, MutationServices<Schema>>;
+    error: Schema.Schema.AnyNoContext | undefined;
   },
 ) => ({
   args: SchemaToValidator.compileArgsSchema(args),
@@ -213,10 +250,22 @@ const mutationFunction = <
       Schema.decode(args),
       Effect.orDie,
       Effect.andThen((decodedArgs) =>
-        handler(decodedArgs).pipe(Effect.provide(mutationLayer(schema, ctx))),
-      ),
-      Effect.andThen((convexReturns) =>
-        Schema.encodeUnknown(returns)(convexReturns),
+        error
+          ? handler(decodedArgs).pipe(
+              Effect.provide(mutationLayer(schema, ctx)),
+              Effect.matchEffect({
+                onSuccess: (value: any) =>
+                  Schema.encodeUnknown(returns)(Either.right(value)),
+                onFailure: (domainError: any) =>
+                  Schema.encodeUnknown(returns)(Either.left(domainError)),
+              }),
+            )
+          : handler(decodedArgs).pipe(
+              Effect.provide(mutationLayer(schema, ctx)),
+              Effect.andThen((convexReturns: any) =>
+                Schema.encodeUnknown(returns)(convexReturns),
+              ),
+            ),
       ),
       Effect.runPromise,
     ),
@@ -235,6 +284,7 @@ const convexActionFunction = <
     args,
     returns,
     handler,
+    error,
   }: {
     args: Schema.Schema<Args, ConvexArgs>;
     returns: Schema.Schema<Returns, ConvexReturns>;
@@ -245,12 +295,14 @@ const convexActionFunction = <
       E,
       RegisteredFunction.ActionServices<DatabaseSchema_>
     >;
+    error: Schema.Schema.AnyNoContext | undefined;
   },
 ) =>
   RegisteredFunction.actionFunctionBase({
     args,
     returns,
     handler,
+    error,
     createLayer: (ctx) =>
       Layer.mergeAll(
         RegisteredFunction.actionLayer(schema, ctx),

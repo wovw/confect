@@ -22,6 +22,7 @@ export interface FunctionSpec<
   Name_ extends string,
   Args_ extends Schema.Schema.AnyNoContext,
   Returns_ extends Schema.Schema.AnyNoContext,
+  Error_ extends Schema.Schema.AnyNoContext | never = never,
 > {
   readonly [TypeId]: TypeId;
   readonly runtimeAndFunctionType: RuntimeAndFunctionType_;
@@ -29,6 +30,7 @@ export interface FunctionSpec<
   readonly name: Name_;
   readonly args: Args_;
   readonly returns: Returns_;
+  readonly error: Error_;
 }
 
 export interface Any {
@@ -40,7 +42,8 @@ export interface AnyWithProps extends FunctionSpec<
   FunctionVisibility,
   string,
   Schema.Schema.AnyNoContext,
-  Schema.Schema.AnyNoContext
+  Schema.Schema.AnyNoContext,
+  Schema.Schema.AnyNoContext | never
 > {}
 
 export interface AnyWithPropsWithRuntime<
@@ -50,7 +53,8 @@ export interface AnyWithPropsWithRuntime<
   FunctionVisibility,
   string,
   Schema.Schema.AnyNoContext,
-  Schema.Schema.AnyNoContext
+  Schema.Schema.AnyNoContext,
+  Schema.Schema.AnyNoContext | never
 > {}
 
 export interface AnyWithPropsWithFunctionType<
@@ -60,7 +64,8 @@ export interface AnyWithPropsWithFunctionType<
   FunctionVisibility,
   string,
   Schema.Schema.AnyNoContext,
-  Schema.Schema.AnyNoContext
+  Schema.Schema.AnyNoContext,
+  Schema.Schema.AnyNoContext | never
 > {}
 
 export type GetRuntimeAndFunctionType<Function extends AnyWithProps> =
@@ -74,6 +79,16 @@ export type Name<Function extends AnyWithProps> = Function["name"];
 export type Args<Function extends AnyWithProps> = Function["args"];
 
 export type Returns<Function extends AnyWithProps> = Function["returns"];
+
+export type Error<Function extends AnyWithProps> = Function["error"];
+
+export type ErrorType<Function extends AnyWithProps> =
+  [Function["error"]] extends [never]
+    ? never
+    : Function["error"]["Type"];
+
+export type HasError<Function extends AnyWithProps> =
+  [Function["error"]] extends [never] ? false : true;
 
 export type WithName<
   Function extends AnyWithProps,
@@ -101,6 +116,13 @@ export type WithoutName<
   Name_ extends Name<Function>,
 > = Exclude<Function, { readonly name: Name_ }>;
 
+type EffectiveReturnsEncoded<Function extends AnyWithProps> =
+  Function["error"] extends never
+    ? Returns<Function>["Encoded"]
+    :
+        | { readonly _tag: "Right"; readonly right: Returns<Function>["Encoded"] }
+        | { readonly _tag: "Left"; readonly left: Error<Function>["Encoded"] };
+
 export type RegisteredFunction<Function extends AnyWithProps> =
   RuntimeAndFunctionType.GetFunctionType<
     Function["runtimeAndFunctionType"]
@@ -108,7 +130,7 @@ export type RegisteredFunction<Function extends AnyWithProps> =
     ? RegisteredQuery<
         GetFunctionVisibility<Function>,
         Args<Function>["Encoded"],
-        Promise<Returns<Function>["Encoded"]>
+        Promise<EffectiveReturnsEncoded<Function>>
       >
     : RuntimeAndFunctionType.GetFunctionType<
           Function["runtimeAndFunctionType"]
@@ -116,7 +138,7 @@ export type RegisteredFunction<Function extends AnyWithProps> =
       ? RegisteredMutation<
           GetFunctionVisibility<Function>,
           Args<Function>["Encoded"],
-          Promise<Returns<Function>["Encoded"]>
+          Promise<EffectiveReturnsEncoded<Function>>
         >
       : RuntimeAndFunctionType.GetFunctionType<
             Function["runtimeAndFunctionType"]
@@ -124,7 +146,7 @@ export type RegisteredFunction<Function extends AnyWithProps> =
         ? RegisteredAction<
             GetFunctionVisibility<Function>,
             Args<Function>["Encoded"],
-            Promise<Returns<Function>["Encoded"]>
+            Promise<EffectiveReturnsEncoded<Function>>
           >
         : never;
 
@@ -145,20 +167,24 @@ const make =
     const Name_ extends string,
     Args_ extends Schema.Schema.AnyNoContext,
     Returns_ extends Schema.Schema.AnyNoContext,
+    Error_ extends Schema.Schema.AnyNoContext = never,
   >({
     name,
     args,
     returns,
+    error,
   }: {
     name: Name_;
     args: Args_;
     returns: Returns_;
+    error?: Error_;
   }): FunctionSpec<
     RuntimeAndFunctionType_,
     FunctionVisibility_,
     Name_,
     Args_,
-    Returns_
+    Returns_,
+    Error_
   > => {
     validateConfectFunctionIdentifier(name);
 
@@ -168,6 +194,7 @@ const make =
       name,
       args,
       returns,
+      error,
     });
   };
 

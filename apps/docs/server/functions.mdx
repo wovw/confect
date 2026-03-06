@@ -89,3 +89,55 @@ export default Impl.make(api).pipe(
   Impl.finalize,
 );
 ```
+
+## Typed domain errors
+
+You can declare an `error` schema on a function spec to model expected domain failures. When `error` is present, Confect returns `Either<Success, DomainError>` on the client.
+
+```ts confect/spec/notes.ts
+import { FunctionSpec, GroupSpec, GenericId } from "@confect/core";
+import { Schema } from "effect";
+
+import { Notes } from "../tables/Notes";
+
+export class NoteNotFoundError extends Schema.TaggedError<NoteNotFoundError>()(
+  "NoteNotFoundError",
+  { noteId: GenericId.GenericId("notes") },
+) {}
+
+export const notes = GroupSpec.make("notes").addFunction(
+  FunctionSpec.publicQuery({
+    name: "getById",
+    args: Schema.Struct({ noteId: GenericId.GenericId("notes") }),
+    returns: Notes.Doc,
+    error: NoteNotFoundError,
+  }),
+);
+```
+
+```ts confect/impl/notes.ts
+import { FunctionImpl } from "@confect/server";
+import { Effect } from "effect";
+
+import api from "../_generated/api";
+import { DatabaseReader } from "../_generated/services";
+import { NoteNotFoundError } from "../errors";
+
+const getById = FunctionImpl.make(
+  api,
+  "notes",
+  "getById",
+  ({ noteId }) =>
+    Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+      return yield* reader
+        .table("notes")
+        .get(noteId)
+        .pipe(
+          Effect.mapError(() => new NoteNotFoundError({ noteId })),
+        );
+    }),
+);
+```
+
+Unhandled defects still throw and appear in your query client's `error` channel. Declared domain errors are encoded in `Either.left(...)` and returned in `data`.

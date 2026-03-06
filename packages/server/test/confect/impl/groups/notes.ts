@@ -2,6 +2,7 @@ import { FunctionImpl, GroupImpl } from "@confect/server";
 import { Effect, Layer } from "effect";
 import api from "../../_generated/api";
 import { DatabaseReader, DatabaseWriter } from "../../_generated/services";
+import { NoteNotFoundError } from "../../errors";
 
 const insert = FunctionImpl.make(api, "groups.notes", "insert", ({ text }) =>
   Effect.gen(function* () {
@@ -56,10 +57,24 @@ const internalGetFirst = FunctionImpl.make(
     }).pipe(Effect.orDie),
 );
 
+const getByIdOrError = FunctionImpl.make(
+  api,
+  "groups.notes",
+  "getByIdOrError",
+  ({ noteId }) =>
+    Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+      return yield* reader.table("notes").get(noteId).pipe(
+        Effect.mapError(() => new NoteNotFoundError({ noteId })),
+      );
+    }),
+);
+
 export const notes = GroupImpl.make(api, "groups.notes").pipe(
   Layer.provide(insert),
   Layer.provide(list),
   Layer.provide(delete_),
   Layer.provide(getFirst),
   Layer.provide(internalGetFirst),
+  Layer.provide(getByIdOrError),
 );

@@ -106,7 +106,11 @@ export type NodeAction<
 
 type Base<FunctionSpec_ extends FunctionSpec.AnyWithProps, R> = (
   args: FunctionSpec.Args<FunctionSpec_>["Type"],
-) => Effect.Effect<FunctionSpec.Returns<FunctionSpec_>["Type"], never, R>;
+) => Effect.Effect<
+  FunctionSpec.Returns<FunctionSpec_>["Type"],
+  FunctionSpec.ErrorType<FunctionSpec_>,
+  R
+>;
 
 export type AnyWithProps = Handler<
   DatabaseSchema.AnyWithProps,
