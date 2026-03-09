@@ -1,10 +1,9 @@
 import { FunctionSpec, GroupSpec } from "@confect/core";
 import { Schema } from "effect";
 
-export const email = GroupSpec.makeNode("email")
-  .addFunction(
-    FunctionSpec.publicNodeAction({
-      name: "send",
+export const email = GroupSpec.defineNode("email", {
+  functions: {
+    send: FunctionSpec.publicNodeAction({
       args: Schema.Struct({
         to: Schema.String,
         subject: Schema.String,
@@ -12,10 +11,7 @@ export const email = GroupSpec.makeNode("email")
       }),
       returns: Schema.Null,
     }),
-  )
-  .addFunction(
-    FunctionSpec.publicNodeAction({
-      name: "getInbox",
+    getInbox: FunctionSpec.publicNodeAction({
       args: Schema.Struct({}),
       returns: Schema.Array(
         Schema.Struct({
@@ -25,4 +21,5 @@ export const email = GroupSpec.makeNode("email")
         }),
       ),
     }),
-  );
+  },
+});

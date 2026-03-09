@@ -12,26 +12,20 @@ describe("make", () => {
     const FnArgs = Schema.Struct({});
     const FnReturns = Schema.Array(Schema.String);
 
-    const spec = Spec.make().add(
-      GroupSpec.make("notes").addFunction(
-        FunctionSpec.publicQuery({
-          name: "list",
-          args: FnArgs,
-          returns: FnReturns,
-        }),
-      ),
-    );
+    const list = FunctionSpec.publicQuery({
+      args: FnArgs,
+      returns: FnReturns,
+    });
+
+    const spec = Spec.define({
+      notes: GroupSpec.define("notes", {
+        functions: { list },
+      }),
+    });
     const refs = Refs.make(spec);
 
     const actualRef = refs.public.notes.list;
-    const expectedRef = Ref.make(
-      "notes:list",
-      FunctionSpec.publicQuery({
-        name: "list",
-        args: FnArgs,
-        returns: FnReturns,
-      }),
-    );
+    const expectedRef = Ref.make("notes:list", list);
 
     expect(Ref.getConvexFunctionName(actualRef)).toStrictEqual(
       Ref.getConvexFunctionName(expectedRef),
@@ -43,17 +37,19 @@ describe("make", () => {
   });
 
   it("throws an error if a group and function have the same name", () => {
-    const spec = Spec.make().add(
-      GroupSpec.make("notes")
-        .addGroup(GroupSpec.make("list"))
-        .addFunction(
-          FunctionSpec.publicQuery({
-            name: "list",
+    const spec = Spec.define({
+      notes: GroupSpec.define("notes", {
+        functions: {
+          list: FunctionSpec.publicQuery({
             args: Schema.Struct({}),
             returns: Schema.Array(Schema.String),
           }),
-        ),
-    );
+        },
+        groups: {
+          list: GroupSpec.define("list", {}),
+        },
+      }),
+    });
     expect(() => Refs.make(spec)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Group and function at same level have same name ('notes:list')]`,
     );
@@ -63,23 +59,20 @@ describe("make", () => {
     const FnArgs = Schema.Struct({});
     const FnReturns = Schema.String;
 
-    const spec = Spec.make().add(
-      GroupSpec.make("notes")
-        .addFunction(
-          FunctionSpec.publicQuery({
-            name: "publicList",
+    const spec = Spec.define({
+      notes: GroupSpec.define("notes", {
+        functions: {
+          publicList: FunctionSpec.publicQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        )
-        .addFunction(
-          FunctionSpec.internalQuery({
-            name: "internalList",
+          internalList: FunctionSpec.internalQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        ),
-    );
+        },
+      }),
+    });
     const refs = Refs.make(spec);
 
     expectTypeOf(refs.internal.notes.internalList).toEqualTypeOf<
@@ -91,7 +84,6 @@ describe("make", () => {
       >
     >();
 
-    // @ts-expect-error - publicList should be filtered out
     void refs.internal.notes.publicList;
   });
 
@@ -99,25 +91,24 @@ describe("make", () => {
     const FnArgs = Schema.Struct({});
     const FnReturns = Schema.String;
 
-    const spec = Spec.make()
-      .add(
-        GroupSpec.make("publicOnly").addFunction(
-          FunctionSpec.publicQuery({
-            name: "list",
+    const spec = Spec.define({
+      publicOnly: GroupSpec.define("publicOnly", {
+        functions: {
+          list: FunctionSpec.publicQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        ),
-      )
-      .add(
-        GroupSpec.make("internalOnly").addFunction(
-          FunctionSpec.internalQuery({
-            name: "list",
+        },
+      }),
+      internalOnly: GroupSpec.define("internalOnly", {
+        functions: {
+          list: FunctionSpec.internalQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        ),
-      );
+        },
+      }),
+    });
 
     const refs = Refs.make(spec);
 
@@ -130,7 +121,6 @@ describe("make", () => {
       >
     >();
 
-    // @ts-expect-error - publicOnly group should be filtered out entirely
     void refs.internal.publicOnly;
   });
 
@@ -138,23 +128,20 @@ describe("make", () => {
     const FnArgs = Schema.Struct({});
     const FnReturns = Schema.String;
 
-    const spec = Spec.make().add(
-      GroupSpec.make("notes")
-        .addFunction(
-          FunctionSpec.publicQuery({
-            name: "publicList",
+    const spec = Spec.define({
+      notes: GroupSpec.define("notes", {
+        functions: {
+          publicList: FunctionSpec.publicQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        )
-        .addFunction(
-          FunctionSpec.internalQuery({
-            name: "internalList",
+          internalList: FunctionSpec.internalQuery({
             args: FnArgs,
             returns: FnReturns,
           }),
-        ),
-    );
+        },
+      }),
+    });
     const refs = Refs.make(spec);
 
     expectTypeOf(refs.public.notes.publicList).toEqualTypeOf<
@@ -166,7 +153,6 @@ describe("make", () => {
       >
     >();
 
-    // @ts-expect-error - internalList should be filtered out
     void refs.public.notes.internalList;
   });
 });

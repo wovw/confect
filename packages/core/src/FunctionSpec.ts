@@ -7,7 +7,6 @@ import type {
 } from "convex/server";
 import type { Schema } from "effect";
 import { Predicate } from "effect";
-import { validateConfectFunctionIdentifier } from "./internal/utils";
 import * as RuntimeAndFunctionType from "./RuntimeAndFunctionType";
 
 export const TypeId = "@confect/core/FunctionSpec";
@@ -19,14 +18,12 @@ export const isFunctionSpec = (u: unknown): u is AnyWithProps =>
 export interface FunctionSpec<
   RuntimeAndFunctionType_ extends RuntimeAndFunctionType.RuntimeAndFunctionType,
   FunctionVisibility_ extends FunctionVisibility,
-  Name_ extends string,
   Args_ extends Schema.Schema.AnyNoContext,
   Returns_ extends Schema.Schema.AnyNoContext,
 > {
   readonly [TypeId]: TypeId;
   readonly runtimeAndFunctionType: RuntimeAndFunctionType_;
   readonly functionVisibility: FunctionVisibility_;
-  readonly name: Name_;
   readonly args: Args_;
   readonly returns: Returns_;
 }
@@ -38,7 +35,6 @@ export interface Any {
 export interface AnyWithProps extends FunctionSpec<
   RuntimeAndFunctionType.RuntimeAndFunctionType,
   FunctionVisibility,
-  string,
   Schema.Schema.AnyNoContext,
   Schema.Schema.AnyNoContext
 > {}
@@ -48,7 +44,6 @@ export interface AnyWithPropsWithRuntime<
 > extends FunctionSpec<
   RuntimeAndFunctionType.WithRuntime<Runtime>,
   FunctionVisibility,
-  string,
   Schema.Schema.AnyNoContext,
   Schema.Schema.AnyNoContext
 > {}
@@ -58,7 +53,6 @@ export interface AnyWithPropsWithFunctionType<
 > extends FunctionSpec<
   RuntimeAndFunctionType_,
   FunctionVisibility,
-  string,
   Schema.Schema.AnyNoContext,
   Schema.Schema.AnyNoContext
 > {}
@@ -69,16 +63,9 @@ export type GetRuntimeAndFunctionType<Function extends AnyWithProps> =
 export type GetFunctionVisibility<Function extends AnyWithProps> =
   Function["functionVisibility"];
 
-export type Name<Function extends AnyWithProps> = Function["name"];
-
 export type Args<Function extends AnyWithProps> = Function["args"];
 
 export type Returns<Function extends AnyWithProps> = Function["returns"];
-
-export type WithName<
-  Function extends AnyWithProps,
-  Name_ extends string,
-> = Extract<Function, { readonly name: Name_ }>;
 
 export type WithRuntimeAndFunctionType<
   Function extends AnyWithProps,
@@ -95,11 +82,6 @@ export type WithFunctionType<
   Function,
   { readonly runtimeAndFunctionType: { readonly functionType: FunctionType_ } }
 >;
-
-export type WithoutName<
-  Function extends AnyWithProps,
-  Name_ extends Name<Function>,
-> = Exclude<Function, { readonly name: Name_ }>;
 
 export type RegisteredFunction<Function extends AnyWithProps> =
   RuntimeAndFunctionType.GetFunctionType<
@@ -142,30 +124,23 @@ const make =
     functionVisibility: FunctionVisibility_,
   ) =>
   <
-    const Name_ extends string,
     Args_ extends Schema.Schema.AnyNoContext,
     Returns_ extends Schema.Schema.AnyNoContext,
   >({
-    name,
     args,
     returns,
   }: {
-    name: Name_;
     args: Args_;
     returns: Returns_;
   }): FunctionSpec<
     RuntimeAndFunctionType_,
     FunctionVisibility_,
-    Name_,
     Args_,
     Returns_
   > => {
-    validateConfectFunctionIdentifier(name);
-
     return Object.assign(Object.create(Proto), {
       runtimeAndFunctionType,
       functionVisibility,
-      name,
       args,
       returns,
     });

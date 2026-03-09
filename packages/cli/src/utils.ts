@@ -1,4 +1,4 @@
-import type { FunctionSpec, Spec } from "@confect/core";
+import type { Spec } from "@confect/core";
 import { FileSystem, Path } from "@effect/platform";
 import type { PlatformError } from "@effect/platform/Error";
 import {
@@ -233,14 +233,8 @@ export const generateFunctions = (spec: Spec.AnyWithProps) =>
         const group = yield* GroupPath.getGroupSpec(spec, groupPath);
         const functionNames = pipe(
           group.functions,
-          Record.values,
-          Array.sortBy(
-            Order.mapInput(
-              Order.string,
-              (fn: FunctionSpec.AnyWithProps) => fn.name,
-            ),
-          ),
-          Array.map((fn) => fn.name),
+          Record.keys,
+          Array.sort(Order.string),
         );
         const result = yield* generateGroupModule({ groupPath, functionNames });
         if (result === "Modified") {
@@ -330,14 +324,8 @@ export const writeGroups = (
 
       const functionNames = pipe(
         group.functions,
-        Record.values,
-        Array.sortBy(
-          Order.mapInput(
-            Order.string,
-            (fn: FunctionSpec.AnyWithProps) => fn.name,
-          ),
-        ),
-        Array.map((fn) => fn.name),
+        Record.keys,
+        Array.sort(Order.string),
       );
 
       yield* Effect.logDebug(`Generating group ${groupPath}...`);

@@ -1,25 +1,19 @@
 import { FunctionSpec, GenericId, GroupSpec } from "@confect/core";
 import { Schema } from "effect";
 
-export const runners = GroupSpec.make("runners")
-  .addFunction(
-    FunctionSpec.publicAction({
-      name: "insertNoteViaRunner",
+export const runners = GroupSpec.define("runners", {
+  functions: {
+    insertNoteViaRunner: FunctionSpec.publicAction({
       args: Schema.Struct({ text: Schema.String }),
       returns: GenericId.GenericId("notes"),
     }),
-  )
-  .addFunction(
-    FunctionSpec.publicAction({
-      name: "getNumberViaRunner",
+    getNumberViaRunner: FunctionSpec.publicAction({
       args: Schema.Struct({}),
       returns: Schema.Number,
     }),
-  )
-  .addFunction(
-    FunctionSpec.publicAction({
-      name: "countNotesViaRunner",
+    countNotesViaRunner: FunctionSpec.publicAction({
       args: Schema.Struct({}),
       returns: Schema.Number,
     }),
-  );
+  },
+});

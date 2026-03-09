@@ -3,7 +3,7 @@ import * as Spec from "../src/Spec";
 
 describe("isSpec", () => {
   it("checks whether a value is a spec", () => {
-    const spec: unknown = Spec.make();
+    const spec: unknown = Spec.define({});
 
     expect(Spec.isSpec(spec)).toStrictEqual(true);
   });

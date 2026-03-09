@@ -112,12 +112,3 @@ export type AnyWithProps = Handler<
   DatabaseSchema.AnyWithProps,
   FunctionSpec.AnyWithProps
 >;
-
-export type WithName<
-  DatabaseSchema_ extends DatabaseSchema.AnyWithProps,
-  FunctionSpec_ extends FunctionSpec.AnyWithProps,
-  FunctionName extends string,
-> = Handler<
-  DatabaseSchema_,
-  FunctionSpec.WithName<FunctionSpec_, FunctionName>
->;

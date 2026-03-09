@@ -143,7 +143,6 @@ export const make = <
   function_: FunctionSpec.FunctionSpec<
     RuntimeAndFunctionType_,
     FunctionVisibility_,
-    string,
     Args_,
     Returns_
   >,
@@ -158,7 +157,6 @@ type HiddenFunctionKey = typeof HiddenFunctionKey;
 type HiddenFunction<Ref_ extends Any> = FunctionSpec.FunctionSpec<
   GetRuntimeAndFunctionType<Ref_>,
   GetFunctionVisibility<Ref_>,
-  string,
   Args<Ref_>,
   Returns<Ref_>
 >;

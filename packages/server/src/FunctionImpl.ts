@@ -1,4 +1,3 @@
-import type * as FunctionSpec from "@confect/core/FunctionSpec";
 import type * as GroupPath from "@confect/core/GroupPath";
 import type * as GroupSpec from "@confect/core/GroupSpec";
 import { Array, Context, Effect, Layer, Ref, String } from "effect";
@@ -33,17 +32,15 @@ export const FunctionImpl = <
 export const make = <
   Api_ extends Api.AnyWithProps,
   const GroupPath_ extends GroupPath.All<Api.Groups<Api_>>,
-  const FunctionName extends FunctionSpec.Name<
-    GroupSpec.Functions<GroupPath.GroupAt<Api.Groups<Api_>, GroupPath_>>
-  >,
+  const FunctionName extends string &
+    keyof GroupPath.GroupAt<Api.Groups<Api_>, GroupPath_>["functions"],
 >(
   api: Api_,
   groupPath: GroupPath_,
   functionName: FunctionName,
-  handler: Handler.WithName<
+  handler: Handler.Handler<
     Api.Schema<Api_>,
-    GroupSpec.Functions<GroupPath.GroupAt<Api.Groups<Api_>, GroupPath_>>,
-    FunctionName
+    GroupPath.GroupAt<Api.Groups<Api_>, GroupPath_>["functions"][FunctionName]
   >,
 ): Layer.Layer<FunctionImpl<GroupPath_, FunctionName>> => {
   const groupPathParts = String.split(groupPath, ".");
@@ -102,9 +99,8 @@ export type FromGroupAtPath<
 > =
   GroupPath.GroupAt<Group, GroupPath_> extends infer GroupAtPath extends
     GroupSpec.AnyWithProps
-    ? FunctionSpec.Name<
-        GroupSpec.Functions<GroupAtPath>
-      > extends infer FunctionNames extends string
+    ? string & keyof GroupAtPath["functions"] extends infer FunctionNames extends
+        string
       ? FunctionNames extends string
         ? FunctionImpl<GroupPath_, FunctionNames>
         : never
