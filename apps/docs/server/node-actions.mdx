@@ -8,23 +8,24 @@ Node actions are like regular actions, but they are executed in the Node.js runt
 
 ## Node Spec
 
-A node spec uses `Spec.makeNode()` and `GroupSpec.makeNode()` to define groups, and `FunctionSpec.publicNodeAction()` or `FunctionSpec.internalNodeAction()` to define functions.
+A node spec uses `Spec.defineNode()` and `GroupSpec.defineNode()` to define groups, and `FunctionSpec.publicNodeAction()` or `FunctionSpec.internalNodeAction()` to define functions.
 
 ```ts confect/nodeSpec/email.ts
 import { FunctionSpec, GroupSpec } from "@confect/core";
 import { Schema } from "effect";
 
-export const email = GroupSpec.makeNode("email").addFunction(
-  FunctionSpec.publicNodeAction({
-    name: "send",
-    args: Schema.Struct({
-      to: Schema.String,
-      subject: Schema.String,
-      body: Schema.String,
+export const email = GroupSpec.defineNode("email", {
+  functions: {
+    send: FunctionSpec.publicNodeAction({
+      args: Schema.Struct({
+        to: Schema.String,
+        subject: Schema.String,
+        body: Schema.String,
+      }),
+      returns: Schema.Null,
     }),
-    returns: Schema.Null,
-  }),
-);
+  },
+});
 ```
 
 Your node spec must be the default export of a `nodeSpec.ts` file in your `confect/` directory.
@@ -33,7 +34,7 @@ Your node spec must be the default export of a `nodeSpec.ts` file in your `confe
 import { Spec } from "@confect/core";
 import { email } from "./nodeSpec/email";
 
-export default Spec.makeNode().add(email);
+export default Spec.defineNode({ email });
 ```
 
 ## Node Impl

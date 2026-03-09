@@ -46,13 +46,14 @@ import { Schema } from "effect";
 
 import { Notes } from "../tables/Notes";
 
-export const notes = GroupSpec.make("notes").addFunction(
-  FunctionSpec.publicQuery({
-    name: "list",
-    args: Schema.Struct({}),
-    returns: Schema.Array(Notes.Doc),
-  }),
-);
+export const notes = GroupSpec.define("notes", {
+  functions: {
+    list: FunctionSpec.publicQuery({
+      args: Schema.Struct({}),
+      returns: Schema.Array(Notes.Doc),
+    }),
+  },
+});
 ```
 
 The hook accepts `{}` (the `Type` of `Schema.Struct({})`) as args and returns `readonly Notes.Doc["Type"][]` (the `Type` of `Schema.Array(Notes.Doc)`):
@@ -86,10 +87,9 @@ Given this spec:
 
 ```ts confect/spec/notes.ts
 FunctionSpec.publicMutation({
-  name: "insert",
   args: Schema.Struct({ text: Schema.String }),
   returns: GenericId.GenericId("notes"),
-});
+}),
 ```
 
 The returned function accepts `{ text: string }` (the `Type` of the `args` schema) and returns a `Promise<GenericId<"notes">>` (the `Type` of the `returns` schema):
@@ -117,10 +117,9 @@ Given this spec:
 
 ```ts confect/spec/random.ts
 FunctionSpec.publicAction({
-  name: "getNumber",
   args: Schema.Struct({}),
   returns: Schema.Number,
-});
+}),
 ```
 
 The returned function accepts `{}` and returns a `Promise<number>`:

@@ -67,7 +67,7 @@ bun add convex @confect/core @confect/server @confect/cli @confect/react
   </Step>
 
   <Step title="Define your Confect API spec">
-    Create a `GroupSpec` and add some functions to it.
+    Create a `GroupSpec` and define its functions.
 
     ```ts confect/spec/notes.ts
     import { FunctionSpec, GroupSpec } from "@confect/core";
@@ -75,21 +75,18 @@ bun add convex @confect/core @confect/server @confect/cli @confect/react
 
     import { Notes } from "../tables/Notes";
 
-    export const notes = GroupSpec.make("notes")
-      .addFunction(
-        FunctionSpec.publicQuery({
-          name: "list",
+    export const notes = GroupSpec.define("notes", {
+      functions: {
+        list: FunctionSpec.publicQuery({
           args: Schema.Struct({}),
           returns: Schema.Array(Notes.Doc),
         }),
-      )
-      .addFunction(
-        FunctionSpec.publicMutation({
-          name: "create",
+        create: FunctionSpec.publicMutation({
           args: Schema.Struct({ text: Schema.String }),
           returns: Schema.Null,
         }),
-      );
+      },
+    });
     ```
 
     Add the `GroupSpec` to your API's `Spec`.
@@ -98,7 +95,7 @@ bun add convex @confect/core @confect/server @confect/cli @confect/react
     import { Spec } from "@confect/core";
     import { notes } from "./spec/notes";
 
-    export default Spec.make().add(notes);
+    export default Spec.define({ notes });
     ```
 
   </Step>
